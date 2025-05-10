@@ -2,19 +2,21 @@
   "name": "subs-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
-    "start:dev": "nodemon --exec ts-node index.ts",
+    "start:dev": "nodemon --exec ts-node ./src/index.ts",
     "migrate": "node-pg-migrate up"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@telegraf/session": "^2.0.0-beta.7",
     "cron": "^4.3.0",
     "dotenv": "^16.5.0",
+    "kysely": "^0.28.2",
     "pg": "^8.15.6",
     "telegraf": "^4.16.3",
     "ts-node": "^10.9.2"

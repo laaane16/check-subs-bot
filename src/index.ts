@@ -1,4 +1,5 @@
 import { Context, Markup, session, Telegraf } from 'telegraf';
+import { Postgres } from "@telegraf/session/pg";
 
 import 'dotenv/config';
 import './notifyUsers';
@@ -6,27 +7,32 @@ import {pool} from './db';
 
 interface IBotContext extends Context {
   session: {
-    months: number;
+    months?: number;
     awaitingMonthsInput?: boolean;
   }
 }
 
 const token = process.env.TG_SECRET_TOKEN;
-const CURRENCY = "RUB"
-const PRICE = 3499
+const providerToken = process.env.PROVIDER_TOKEN;
+const channelId = process.env.PRIVATE_CHANNEL_ID;
+const CURRENCY = "RUB";
+const PRICE = 3499;
 
-if (!token){
-  throw new Error('No bot token')
+if (!token || !providerToken || !channelId){
+  throw new Error('missing required environment')
 }
 
-export const bot = new Telegraf<IBotContext>(token)
+export const bot = new Telegraf<IBotContext>(token);
+
+const store = Postgres({pool}) as any;
+
+bot.use(Telegraf.log())
+bot.use(session({store}));
+bot.catch((err, ctx) => {
+  console.error(`Ошибка в обработке апдейта от ${ctx.from?.id}:`, err);
+});
 
 const getInvoice = (id: number, months: number) => {
-  const providerToken = process.env.TEST_PROVIDER_TOKEN;
-  if (!providerToken){
-    throw new Error('Invalid provider token')
-  }
-
   const invoice = {
     "chat_id" : id,
     "title" : 'Подписка на приватный канал',
@@ -35,9 +41,9 @@ const getInvoice = (id: number, months: number) => {
     "currency" : CURRENCY,
     "provider_token" : providerToken,
     prices: [{ label: 'Invoice Title', amount: 100 * PRICE * months }],
-}
+  }
 
-  return invoice
+  return invoice;
 }
 
 const restartBot = async (ctx: IBotContext) => {
@@ -54,15 +60,12 @@ const restartBot = async (ctx: IBotContext) => {
     .oneTime(false));
 }
 
-bot.use(Telegraf.log())
-bot.use(session());
-
-bot.start((ctx) => {
-  restartBot(ctx)
+bot.start(async (ctx) => {
+  await restartBot(ctx);
 })
 
-bot.hears("📦 Приобрести подписку", (ctx) => {
-  ctx.reply(
+bot.hears("📦 Приобрести подписку", async (ctx) => {
+  await ctx.reply(
     "Выберите метод оплаты",
     Markup.inlineKeyboard([
       [Markup.button.callback("Банковская карта/ ЮMoney", "yocassa_payment")],
@@ -80,20 +83,25 @@ bot.hears("🕒 Срок подписки",async (ctx) => {
   const result = rows[0];
 
   if (result && result.subscription_end){
-    const formatted = result.subscription_end.toLocaleDateString('ru-RU', {
+    const date = new Date(result.subscription_end);
+    const formatted = date.toLocaleDateString('ru-RU', { 
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
-    ctx.reply(`Подписка активна до ${formatted}`)
+  
+    await ctx.reply(`Подписка активна до ${formatted}`)
   }
   else{
-    ctx.reply("Подписка неактивна")
+    await ctx.reply("Подписка неактивна")
   }
 })
 
-
 bot.action("yocassa_payment", async (ctx) => {
+  if (!ctx.session){
+    return restartBot(ctx);
+  }
+
   ctx.session.awaitingMonthsInput = true;
 
   await ctx.reply(
@@ -102,54 +110,62 @@ bot.action("yocassa_payment", async (ctx) => {
       [Markup.button.callback("Отмена", "cancel_action")]
     ])
   );
+
+  await ctx.answerCbQuery(); 
 });
 
 bot.action('cancel_action', async (ctx) => {
-    await ctx.editMessageText(
-      "Действие отменено. Возвращаюсь в главное меню...",
-    );
+  await ctx.editMessageText(
+    "Действие отменено. Возвращаюсь в главное меню...",
+  );
 
-    ctx.session = { months: 1 };
+  await restartBot(ctx);
 
-    restartBot(ctx);
-})
+  await ctx.answerCbQuery(); 
+});
 
 
 bot.on("text", async (ctx) => {
   const text = ctx.message.text.trim();
   const months = Number(text);
 
-  if (
-    ctx.session.awaitingMonthsInput === true
-  ) {
-    if (!Number.isInteger(months) || months < 1 || months > 12) {
-      return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
-        [Markup.button.callback("Отмена", "cancel_action")]
-      ]));
-    }
-
-    ctx.session.months = months;
-
-    ctx.reply(
-      `Вы выбрали ${months} мес. подписки.`,
-      Markup.inlineKeyboard([
-        [Markup.button.callback("Оплатить", "confirm_payment")],
-        [Markup.button.callback("Отмена", "cancel_action")]
-      ])
-    );
+  if (!ctx.session || !ctx.session?.awaitingMonthsInput){
+    return restartBot(ctx);
   }
+
+  if (!Number.isInteger(months) || months < 1 || months > 12) {
+    return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
+      [Markup.button.callback("Отмена", "cancel_action")]
+    ]));
+  }
+
+  ctx.session.months = months;
+
+  await ctx.reply(
+    `Вы выбрали ${months} мес. подписки.`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback("Оплатить", "confirm_payment")],
+      [Markup.button.callback("Отмена", "cancel_action")]
+    ])
+  );
 });
 
-bot.on('pre_checkout_query', (ctx) => ctx.answerPreCheckoutQuery(true))
+bot.on('pre_checkout_query', async (ctx) => await ctx.answerPreCheckoutQuery(true));
 
-bot.action("confirm_payment",  (ctx) => {
+bot.action("confirm_payment", async (ctx) => {
+  await ctx.answerCbQuery(); 
+
   const id = ctx.from.id;
-  const months = ctx.session.months
-  return ctx.replyWithInvoice(getInvoice(id, months))
-})
+
+  if (!ctx.session || !ctx.session.months){
+    return restartBot(ctx);
+  }
+  const months = ctx.session.months;
+
+  await ctx.replyWithInvoice(getInvoice(id, months));
+});
 
 bot.on('successful_payment', async (ctx) => {
-  const channelId = process.env.PRIVATE_CHANNEL_ID as string;
   const inviteLink = await bot.telegram.createChatInviteLink(channelId, {
     expire_date: Math.floor(Date.now() / 1000) + 60 * 60 * 24, 
     member_limit: 1,
@@ -164,13 +180,12 @@ bot.on('successful_payment', async (ctx) => {
   ON CONFLICT (user_id) DO UPDATE
   SET subscription_end = 
     CASE
-      WHEN users.subscription_end IS NOT NULL THEN users.subscription_end + ($2 || ' month')::INTERVAL
+      WHEN users.subscription_end > CURRENT_DATE THEN users.subscription_end + ($2 || ' month')::INTERVAL
       ELSE CURRENT_DATE + ($2 || ' month')::INTERVAL
     END
   RETURNING user_id, subscription_end;
 `;
   
-
   let attempts = 0
   let res;
 
@@ -188,6 +203,6 @@ bot.on('successful_payment', async (ctx) => {
   }
 
   await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`); 
-})
+});
 
 bot.launch();
