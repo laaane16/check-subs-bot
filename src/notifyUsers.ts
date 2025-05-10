@@ -2,7 +2,7 @@ import { CronJob } from 'cron';
 
 import 'dotenv/config'
 import { pool } from './db';
-import { bot } from '.';
+import { bot } from './index';
 
 
 async function notifyUsers(daysLeft: number) {

@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: on-failure
+    ports:
+      - "5432:5432"
+  bot:
+    build: .
+    command: npm run migrate
+    env_file:
+      - ./.env
+    restart: always
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

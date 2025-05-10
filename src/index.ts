@@ -1,8 +1,8 @@
-import { Context, Markup, session, Telegraf } from 'telegraf'
+import { Context, Markup, session, Telegraf } from 'telegraf';
 
-import 'dotenv/config'
-import './notifyUsers'
-import {pool} from './db'
+import 'dotenv/config';
+import './notifyUsers';
+import {pool} from './db';
 
 interface IBotContext extends Context {
   session: {
