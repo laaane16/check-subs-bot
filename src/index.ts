@@ -89,11 +89,14 @@ bot.hears("🕒 Срок подписки",async (ctx) => {
       month: 'long',
       day: 'numeric'
     });
-  
-    await ctx.reply(`Подписка активна до ${formatted}`)
+    if (date < new Date()){
+      await ctx.reply("Подписка неактивна");
+    }else{
+      await ctx.reply(`Подписка активна до ${formatted}`);
+    }
   }
   else{
-    await ctx.reply("Подписка неактивна")
+    await ctx.reply("Подписка неактивна");
   }
 })
 

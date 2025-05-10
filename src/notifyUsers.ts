@@ -25,8 +25,7 @@ async function notifyUsers(daysLeft: number) {
       const message = `⏳ Ваша подписка закончилась. Вынуждены удалить вас из приватного канала.`;
       try {
         await bot.telegram.sendMessage(row.user_id, message);
-        await bot.telegram.banChatMember(process.env.PRIVATE_CHANNEL_ID as string, row.user_id, Math.floor(Date.now() / 1000) + 30);
-
+        await bot.telegram.banChatMember(process.env.PRIVATE_CHANNEL_ID as string, row.user_id, Math.floor(Date.now() / 1000) + 31);
       } catch (err) {
         console.error(`Не удалось отправить сообщение пользователю ${row.user_id}:`, err);
       }
@@ -35,7 +34,7 @@ async function notifyUsers(daysLeft: number) {
   return;
 }
 
-const job = new CronJob('00 10 * * *', async () => {
+const job = new CronJob('00 22 * * *', async () => {
     await notifyUsers(3);
     await notifyUsers(2);
     await notifyUsers(1);
