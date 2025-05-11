@@ -37,10 +37,28 @@ const getInvoice = (id: number, months: number) => {
     "chat_id" : id,
     "title" : 'Подписка на приватный канал',
     "description" : "Ежемесячная подписка на мой приватный канал",
-    "payload" : "YourPayload",
+    "payload" : `subscription_${id}_${months}`,
     "currency" : CURRENCY,
     "provider_token" : providerToken,
     prices: [{ label: 'Invoice Title', amount: 100 * PRICE * months }],
+    needEmail: true,
+    send_email_to_provider : true,
+    providerData: {
+      receipt: {
+        items: [
+            {
+            "description" : "Подписка на приватный канал",
+            "vat_code" : 1,
+            "quantity" : months,
+            "amount" : {
+              "value" : `${PRICE}.00`,
+              "currency" : CURRENCY
+            },
+            "payment_mode" : "full_payment",
+          }
+        ]
+      }
+    }
   }
 
   return invoice;
