@@ -8,13 +8,6 @@ services:
       - ./.env
     ports:
       - "5432:5432"
-  migrate:
-    build: .
-    command: npm run migrate
-    env_file:
-      - ./.env
-    depends_on:
-      - db
   bot:
     build: .
     env_file:
@@ -22,7 +15,6 @@ services:
     restart: always
     depends_on:
       - db
-      - migrate
 
 volumes:
   pgdata:
