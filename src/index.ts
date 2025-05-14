@@ -4,6 +4,7 @@ import { Postgres } from "@telegraf/session/pg";
 import 'dotenv/config';
 import './notifyUsers';
 import {pool} from './db';
+import { pre } from 'telegraf/typings/format';
 
 interface IBotContext extends Context {
   session: {
@@ -16,9 +17,9 @@ const token = process.env.TG_SECRET_TOKEN;
 const providerToken = process.env.PROVIDER_TOKEN;
 const channelId = process.env.PRIVATE_CHANNEL_ID;
 const CURRENCY = "RUB";
-const PRICE = 3499;
+const PRICE = Number(process.env.PRICE);
 
-if (!token || !providerToken || !channelId){
+if (!token || !providerToken || !channelId || !PRICE){
   throw new Error('missing required environment')
 }
 
