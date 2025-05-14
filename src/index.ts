@@ -3,8 +3,7 @@ import { Postgres } from "@telegraf/session/pg";
 
 import 'dotenv/config';
 import './notifyUsers';
-import {pool} from './db';
-import { pre } from 'telegraf/typings/format';
+import { pool } from './db';
 
 interface IBotContext extends Context {
   session: {

@@ -6,6 +6,8 @@ services:
     restart: on-failure
     env_file:
       - ./.env
+    networks:
+      - app-network 
 
   bot:
     build: .
@@ -14,6 +16,12 @@ services:
     restart: always
     depends_on:
       - db
+    networks:
+      - app-network   
+
+networks:
+  app-network:
+    driver: bridge 
 
 volumes:
   pgdata:
