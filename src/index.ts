@@ -41,9 +41,9 @@ const getInvoice = (id: number, months: number) => {
     "currency" : CURRENCY,
     "provider_token" : providerToken,
     prices: [{ label: 'Invoice Title', amount: 100 * PRICE * months }],
-    needEmail: true,
+    need_email: true,
     send_email_to_provider : true,
-    providerData: {
+    provider_data: JSON.stringify({
       receipt: {
         items: [
             {
@@ -58,7 +58,7 @@ const getInvoice = (id: number, months: number) => {
           }
         ]
       }
-    }
+    })
   }
 
   return invoice;
