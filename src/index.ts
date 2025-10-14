@@ -126,7 +126,8 @@ bot.action("yocassa_payment", async (ctx) => {
   ctx.session.awaitingMonthsInput = true;
 
   await ctx.reply(
-    "Введите количество месяцев подписки (от 1 до 12):",
+    "В данный момент можно приобрести только 1 месяц подписки по заниженной цене, введите любой символ для подтверждения",
+    // "Введите количество месяцев подписки (от 1 до 12):",
     Markup.inlineKeyboard([
       [Markup.button.callback("Отмена", "cancel_action")]
     ])
@@ -148,17 +149,18 @@ bot.action('cancel_action', async (ctx) => {
 
 bot.on("text", async (ctx) => {
   const text = ctx.message.text.trim();
-  const months = Number(text);
+  // const months = Number(text);
+  const months = 1;
 
   if (!ctx.session || !ctx.session?.awaitingMonthsInput){
     return restartBot(ctx);
   }
 
-  if (!Number.isInteger(months) || months < 1 || months > 12) {
-    return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
-      [Markup.button.callback("Отмена", "cancel_action")]
-    ]));
-  }
+  // if (!Number.isInteger(months) || months < 1 || months > 12) {
+  //   return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
+  //     [Markup.button.callback("Отмена", "cancel_action")]
+  //   ]));
+  // }
 
   ctx.session.months = months;
 
