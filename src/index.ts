@@ -220,6 +220,7 @@ bot.on('successful_payment', async (ctx) => {
     }catch(e){
       attempts++;
       if (attempts === 5){
+        await ctx.reply(`Произошла какая-то ошибка, пожалуйста, напишите об этом @pkorovkina`); 
         console.log(`Произошла ${e} ошибка при записывании в бд оплаты для ${userId}`)
       }
     }
