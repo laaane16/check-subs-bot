@@ -40,7 +40,7 @@ async function notifyUsers(daysLeft: number) {
     } else {
       const message = `⏳ Ваша подписка закончилась. Вынуждены удалить вас из приватного канала.`;
       try {
-        await bot.telegram.sendMessage(row.user_id, message);
+        await bot.telegram.sendMessage(row.user_id, message).catch((err) => console.error(err));
         // Удаляем из канала
         await bot.telegram.banChatMember(
           process.env.PRIVATE_CHANNEL_ID as string,
