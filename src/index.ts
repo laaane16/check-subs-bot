@@ -114,7 +114,7 @@ const getActiveSubscriptionMessage = (
   const currentTitle = subscriptions[activeType].title;
   const formatted = formatSubscriptionDate(subscriptionEnd);
 
-  return `У тебя активна подписка ${currentTitle} до ${formatted}.\n\nКупить другую можно только после окончания текущей.`;
+  return `У тебя активна подписка ${currentTitle} до ${formatted}\n\nКупить другую можно только после окончания текущей.`;
 };
 
 const checkSubscriptionPurchase = async (
