@@ -114,7 +114,7 @@ const getActiveSubscriptionMessage = (
   const currentTitle = subscriptions[activeType].title;
   const formatted = formatSubscriptionDate(subscriptionEnd);
 
-  return `У тебя активна подписка ${currentTitle} до ${formatted}.\n\nСейчас можно продлить только текущую подписку. Купить другую подписку можно после окончания текущей подписки.`;
+  return `У тебя активна подписка ${currentTitle} до ${formatted}.\n\nКупить другую можно только после окончания текущей.`;
 };
 
 const checkSubscriptionPurchase = async (
@@ -212,10 +212,10 @@ bot.hears("📦 Приобрести подписку", async (ctx) => {
     const subscription = subscriptions[activeSubscription.subscription_type];
 
     await ctx.reply(
-      getActiveSubscriptionMessage(
+      `${getActiveSubscriptionMessage(
         activeSubscription.subscription_type,
         activeSubscription.subscription_end
-      ),
+      )}. Но ты всегда можешь продлить активный вариант`,
       Markup.inlineKeyboard([
         [
           Markup.button.callback(
