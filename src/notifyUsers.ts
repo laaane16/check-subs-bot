@@ -1,36 +1,29 @@
 import { CronJob } from "cron";
 
 import "dotenv/config";
-import { pool } from "./db";
 import { bot } from "./index";
+import { subscriptions } from "./subscriptions";
+import {
+  deleteUserSubscription,
+  getSubscriptionsForNotification,
+} from "./subscriptionRepository";
 
 async function notifyUsers(daysLeft: number) {
-  let query: string;
+  const subscriptionsForNotification =
+    await getSubscriptionsForNotification(daysLeft);
 
-  if (daysLeft === 0) {
-    // Выбираем всех пользователей с просроченной подпиской
-    query = `
-      SELECT user_id
-      FROM users
-      WHERE subscription_end <= CURRENT_DATE;
-    `;
-  } else {
-    // Выбираем пользователей, у которых подписка заканчивается через daysLeft дней
-    query = `
-      SELECT user_id
-      FROM users
-      WHERE subscription_end = CURRENT_DATE + INTERVAL '${daysLeft} days';
-    `;
-  }
+  for (const row of subscriptionsForNotification) {
+    const subscriptionType = row.subscription_type;
+    const subscription = subscriptions[subscriptionType];
 
-  const res = await pool.query(query);
-  for (const row of res.rows) {
     if (daysLeft >= 1) {
-      const message = `⏳ Ваша подписка заканчивается через ${daysLeft} ${
+      const message = `⏳ Ваша подписка ${subscription.title} заканчивается через ${daysLeft} ${
         daysLeft === 1 ? "день" : "дня"
       }! Не забудьте продлить, чтобы не потерять доступ.`;
       try {
-        await bot.telegram.sendMessage(row.user_id, message);
+        await bot.telegram.sendMessage(row.user_id, message, {
+          disable_notification: true,
+        });
       } catch (err) {
         console.error(
           `Не удалось отправить сообщение пользователю ${row.user_id}:`,
@@ -38,29 +31,35 @@ async function notifyUsers(daysLeft: number) {
         );
       }
     } else {
-      const message = `⏳ Ваша подписка закончилась. Вынуждены удалить вас из приватного канала.`;
+      const message = `⏳ Ваша подписка ${subscription.title} закончилась. Вынуждены удалить вас из приватного канала.`;
       try {
-        await bot.telegram.sendMessage(row.user_id, message).catch((err) => console.error(err));
+        await bot.telegram
+          .sendMessage(row.user_id, message, {
+            disable_notification: true,
+          })
+          .catch((err) => console.error(err));
         // Удаляем из канала
         await bot.telegram.banChatMember(
-          process.env.PRIVATE_CHANNEL_ID as string,
+          subscription.channelId,
           row.user_id,
           Math.floor(Date.now() / 1000) + 31
         );
-        // Удаляем из чата
-        await bot.telegram.banChatMember(
-          Number(process.env.PRIVATE_CHAT_ID),
-          row.user_id,
-          Math.floor(Date.now() / 1000) + 31
-        );
-        // Удаляем из бд
-        await pool.query(`DELETE FROM users WHERE user_id = $1`, [row.user_id]);
+
+        if (subscription.chatId) {
+          await bot.telegram.banChatMember(
+            subscription.chatId,
+            row.user_id,
+            Math.floor(Date.now() / 1000) + 31
+          );
+        }
+
+        await deleteUserSubscription(row.user_id);
         console.log(
-          `Пользователь ${row.user_id} удален из таблицы после окончания подписки.`
+          `Пользователь ${row.user_id} удален после окончания подписки ${subscription.title}.`
         );
       } catch (err) {
         console.error(
-          `Не удалось отправить сообщение пользователю ${row.user_id}:`,
+          `Не удалось обработать окончание подписки пользователя ${row.user_id}:`,
           err
         );
       }
@@ -70,7 +69,7 @@ async function notifyUsers(daysLeft: number) {
 }
 
 const job = new CronJob(
-  "00 22 * * *",
+  "05 00 * * *",
   async () => {
     await notifyUsers(3);
     await notifyUsers(2);
