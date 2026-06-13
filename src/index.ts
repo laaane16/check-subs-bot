@@ -172,19 +172,6 @@ const requestPaymentMethod = async (ctx: IBotContext) => {
   );
 };
 
-const requestPaymentConfirmation = async (ctx: IBotContext) => {
-  if (!ctx.session?.subscriptionType) {
-    return restartBot(ctx);
-  }
-
-  await ctx.reply(
-    `Ты выбрала 1 мес. подписки ${subscriptions[ctx.session.subscriptionType].title}.`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback("Оплатить", "confirm_payment")],
-      [Markup.button.callback("Отмена", "cancel_action")],
-    ])
-  );
-};
 
 const selectSubscription = async (
   ctx: IBotContext,
@@ -301,7 +288,9 @@ bot.action("yocassa_payment", async (ctx) => {
     return;
   }
 
-  await requestPaymentConfirmation(ctx);
+  await ctx.replyWithInvoice(
+    getInvoice(ctx.from!.id, ctx.session.subscriptionType)
+  );
   await ctx.answerCbQuery();
 });
 
@@ -340,29 +329,6 @@ bot.on(
     return ctx.answerPreCheckoutQuery(true);
   }
 );
-
-bot.action("confirm_payment", async (ctx) => {
-  await ctx.answerCbQuery();
-
-  const id = ctx.from.id;
-
-  if (!ctx.session || !ctx.session.subscriptionType) {
-    return restartBot(ctx);
-  }
-
-  const restriction = await checkSubscriptionPurchase(
-    ctx.from.id,
-    ctx.session.subscriptionType
-  );
-  if (restriction) {
-    await ctx.reply(restriction);
-    return;
-  }
-
-  await ctx.replyWithInvoice(
-    getInvoice(id, ctx.session.subscriptionType)
-  );
-});
 
 bot.on("successful_payment", async (ctx) => {
   const payload = parseInvoicePayload(
