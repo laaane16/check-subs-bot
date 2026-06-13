@@ -114,7 +114,7 @@ const getActiveSubscriptionMessage = (
   const currentTitle = subscriptions[activeType].title;
   const formatted = formatSubscriptionDate(subscriptionEnd);
 
-  return `У вас активна подписка ${currentTitle} до ${formatted}.\n\nСейчас можно продлить только текущий тариф. Купить другой тариф можно после окончания текущей подписки.`;
+  return `У тебя активна подписка ${currentTitle} до ${formatted}.\n\nСейчас можно продлить только текущую подписку. Купить другую подписку можно после окончания текущей подписки.`;
 };
 
 const checkSubscriptionPurchase = async (
@@ -155,7 +155,7 @@ const restartBot = async (ctx: IBotContext) => {
   };
 
   await ctx.reply(
-    "Привет, дорогая! Рада приветствовать тебя на марафоне, где ты можешь сделать шаг навстречу своим изменениям 💋\n\nУ нас есть два тарифа: VIP и Lite. Нажми «Приобрести подписку», чтобы посмотреть детали и выбрать подходящий вариант.",
+    "Привет, дорогая! Рада приветствовать тебя на марафоне, где ты можешь сделать шаг навстречу своим изменениям 💋\n\nУ нас есть две подписки: VIP и Lite. Нажми «Приобрести подписку», чтобы посмотреть детали и выбрать подходящий вариант.",
     Markup.keyboard([["📦 Приобрести подписку"], ["🕒 Срок подписки"]])
       .resize()
       .oneTime(false)
@@ -164,7 +164,7 @@ const restartBot = async (ctx: IBotContext) => {
 
 const requestPaymentMethod = async (ctx: IBotContext) => {
   await ctx.reply(
-    "Выберите метод оплаты",
+    "Выбери метод оплаты",
     Markup.inlineKeyboard([
       [Markup.button.callback("Банковская карта / ЮMoney", "yocassa_payment")],
       [Markup.button.callback("Закрыть", "cancel_action")],
@@ -178,7 +178,7 @@ const requestPaymentConfirmation = async (ctx: IBotContext) => {
   }
 
   await ctx.reply(
-    `Вы выбрали 1 мес. подписки ${subscriptions[ctx.session.subscriptionType].title}.`,
+    `Ты выбрала 1 мес. подписки ${subscriptions[ctx.session.subscriptionType].title}.`,
     Markup.inlineKeyboard([
       [Markup.button.callback("Оплатить", "confirm_payment")],
       [Markup.button.callback("Отмена", "cancel_action")],
@@ -195,7 +195,7 @@ const selectSubscription = async (
   }
 
   if (!ctx.from) {
-    await ctx.reply("Не удалось определить пользователя. Попробуйте еще раз.");
+    await ctx.reply("Не удалось определить пользователя. Попробуй еще раз.");
     return;
   }
 
@@ -243,7 +243,7 @@ bot.hears("📦 Приобрести подписку", async (ctx) => {
   }
 
   await ctx.reply(
-    `Выбери тариф:\n\nVIP — ${subscriptions.vip.price} ₽\n• занятия с психологом\n• чат и общение\n• йога\n• меню от нутрициолога\n\nLite — ${subscriptions.lite.price} ₽\n• только тренировки\n• без йоги\n• без чата`,
+    `Выбери подписку:\n\nVIP — ${subscriptions.vip.price} ₽\n• занятия с психологом\n• чат и общение\n• йога\n• меню от нутрициолога\n\nLite — ${subscriptions.lite.price} ₽\n• только тренировки\n• без йоги\n• без чата`,
     Markup.inlineKeyboard([
       [
         Markup.button.callback(
@@ -321,7 +321,7 @@ bot.on(
     if (!payload || payload.userId !== ctx.from.id) {
       return ctx.answerPreCheckoutQuery(
         false,
-        "Не удалось проверить подписку. Создайте новый счет."
+        "Не удалось проверить подписку. Создай новый счет."
       );
     }
 
@@ -374,14 +374,14 @@ bot.on("successful_payment", async (ctx) => {
 
   if (!subscriptionDuration || !subscriptionType) {
     await ctx.reply(
-      "Оплата прошла, но не удалось определить тариф. Пожалуйста, напишите @pkorovkina."
+      "Оплата прошла, но не удалось определить подписку. Пожалуйста, напиши @pkorovkina."
     );
     return;
   }
 
   const restriction = await checkSubscriptionPurchase(userId, subscriptionType);
   if (restriction) {
-    await ctx.reply(`Оплата прошла, но не по тому тарифу, пожалуйста, напишите @pkorovkina.`);
+    await ctx.reply(`Оплата прошла, но не по той подписке, пожалуйста, напиши @pkorovkina.`);
     return;
   }
 
@@ -401,7 +401,7 @@ bot.on("successful_payment", async (ctx) => {
     console.log("Пользователь добавлен или обновлен:", res);
   } catch (e) {
     await ctx.reply(
-      "Произошла ошибка при записи оплаты. Пожалуйста, напишите @pkorovkina."
+      "Произошла ошибка при записи оплаты. Пожалуйста, напиши @pkorovkina."
     );
     console.log(`Ошибка ${e} при записи оплаты в БД для пользователя ${userId}`);
     return;
@@ -421,10 +421,10 @@ bot.on("successful_payment", async (ctx) => {
       }
     );
 
-    await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`);
+    await ctx.reply(`Вот твоя временная ссылка: ${inviteLink.invite_link}`);
   } catch (e) {
     await ctx.reply(
-      "Произошла ошибка при создании ссылки. Пожалуйста, напишите @pkorovkina."
+      "Произошла ошибка при создании ссылки. Пожалуйста, напиши @pkorovkina."
     );
   }
 });
