@@ -71,6 +71,18 @@ const getInvoice = (id: number, months: number) => {
   return invoice;
 };
 
+const hasChannelAccess = async (userId: number) => {
+  try {
+    const member = await bot.telegram.getChatMember(channelId, userId);
+    return ["creator", "administrator", "member", "restricted"].includes(
+      member.status
+    );
+  } catch (error) {
+    console.error(`Не удалось проверить доступ пользователя ${userId}:`, error);
+    return false;
+  }
+};
+
 const restartBot = async (ctx: IBotContext) => {
   ctx.session = {
     months: 1,
@@ -152,7 +164,6 @@ bot.action("cancel_action", async (ctx) => {
 });
 
 bot.on("text", async (ctx) => {
-  const text = ctx.message.text.trim();
   // const months = Number(text);
   const months = 1;
 
@@ -196,13 +207,9 @@ bot.action("confirm_payment", async (ctx) => {
 });
 
 bot.on("successful_payment", async (ctx) => {
-  const inviteLink = await bot.telegram.createChatInviteLink(channelId, {
-    expire_date: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
-    member_limit: 1,
-  });
-
   const subscriptionDuration = ctx.session.months;
   const userId = ctx.from.id;
+  const alreadyHasAccess = await hasChannelAccess(userId);
 
   const insertQuery = `
   INSERT INTO users (user_id, subscription_end)
@@ -228,7 +235,7 @@ bot.on("successful_payment", async (ctx) => {
       attempts++;
       if (attempts === 5) {
         await ctx.reply(
-          `Произошла какая-то ошибка, пожалуйста, напишите об этом @pkorovkina`
+          "Произошла какая-то ошибка, пожалуйста, напишите об этом @pkorovkina"
         );
         console.log(
           `Произошла ${e} ошибка при записывании в бд оплаты для ${userId}`
@@ -237,7 +244,24 @@ bot.on("successful_payment", async (ctx) => {
     }
   }
 
-  await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`);
+  if (alreadyHasAccess) {
+    await ctx.reply("Подписка обновлена.");
+    return;
+  }
+
+  try {
+    const inviteLink = await bot.telegram.createChatInviteLink(channelId, {
+      expire_date: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+      member_limit: 1,
+    });
+
+    await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`);
+  }catch(e){
+    await ctx.reply(
+      "Произошла какая-то ошибка при создании сссылки,пожалуйста, напишите об этом @pkorovkina"
+    );
+  }
+
 });
 
 bot.launch();
