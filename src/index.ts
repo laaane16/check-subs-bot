@@ -215,7 +215,7 @@ bot.hears("📦 Приобрести подписку", async (ctx) => {
       `${getActiveSubscriptionMessage(
         activeSubscription.subscription_type,
         activeSubscription.subscription_end
-      )}. Но ты всегда можешь продлить активный вариант`,
+      )} Но ты всегда можешь продлить активный вариант`,
       Markup.inlineKeyboard([
         [
           Markup.button.callback(
