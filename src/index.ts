@@ -114,7 +114,7 @@ const getActiveSubscriptionMessage = (
   const currentTitle = subscriptions[activeType].title;
   const formatted = formatSubscriptionDate(subscriptionEnd);
 
-  return `У тебя активна подписка ${currentTitle} до ${formatted}\n\nКупить другую можно только после окончания текущей.`;
+  return `У тебя активна подписка ${currentTitle} до ${formatted}\n\nКупить другую можно только после окончания текущей`;
 };
 
 const checkSubscriptionPurchase = async (
@@ -155,7 +155,7 @@ const restartBot = async (ctx: IBotContext) => {
   };
 
   await ctx.reply(
-    "Привет, дорогая! Рада приветствовать тебя на марафоне, где ты можешь сделать шаг навстречу своим изменениям 💋\n\nУ нас есть две подписки: VIP и Lite. Нажми «Приобрести подписку», чтобы посмотреть детали и выбрать подходящий вариант.",
+    "Привет, дорогая! Рада приветствовать тебя на марафоне, где ты можешь сделать шаг навстречу своим изменениям 💋\n\nУ нас есть две подписки: VIP и Lite. Нажми «Приобрести подписку», чтобы посмотреть детали и выбрать подходящий вариант",
     Markup.keyboard([["📦 Приобрести подписку"], ["🕒 Срок подписки"]])
       .resize()
       .oneTime(false)
@@ -182,7 +182,7 @@ const selectSubscription = async (
   }
 
   if (!ctx.from) {
-    await ctx.reply("Не удалось определить пользователя. Попробуй еще раз.");
+    await ctx.reply("Не удалось определить пользователя. Попробуй еще раз");
     return;
   }
 
@@ -215,7 +215,7 @@ bot.hears("📦 Приобрести подписку", async (ctx) => {
       `${getActiveSubscriptionMessage(
         activeSubscription.subscription_type,
         activeSubscription.subscription_end
-      )} Но ты всегда можешь продлить активный вариант`,
+      )}. Но ты всегда можешь продлить активный вариант`,
       Markup.inlineKeyboard([
         [
           Markup.button.callback(
@@ -310,7 +310,7 @@ bot.on(
     if (!payload || payload.userId !== ctx.from.id) {
       return ctx.answerPreCheckoutQuery(
         false,
-        "Не удалось проверить подписку. Создай новый счет."
+        "Не удалось проверить подписку. Создай новый счет"
       );
     }
 
@@ -340,14 +340,14 @@ bot.on("successful_payment", async (ctx) => {
 
   if (!subscriptionDuration || !subscriptionType) {
     await ctx.reply(
-      "Оплата прошла, но не удалось определить подписку. Пожалуйста, напиши @pkorovkina."
+      "Оплата прошла, но не удалось определить подписку. Пожалуйста, напиши @pkorovkina"
     );
     return;
   }
 
   const restriction = await checkSubscriptionPurchase(userId, subscriptionType);
   if (restriction) {
-    await ctx.reply(`Оплата прошла, но не по той подписке, пожалуйста, напиши @pkorovkina.`);
+    await ctx.reply(`Оплата прошла, но не по той подписке, пожалуйста, напиши @pkorovkina`);
     return;
   }
 
@@ -367,14 +367,14 @@ bot.on("successful_payment", async (ctx) => {
     console.log("Пользователь добавлен или обновлен:", res);
   } catch (e) {
     await ctx.reply(
-      "Произошла ошибка при записи оплаты. Пожалуйста, напиши @pkorovkina."
+      "Произошла ошибка при записи оплаты. Пожалуйста, напиши @pkorovkina"
     );
     console.log(`Ошибка ${e} при записи оплаты в БД для пользователя ${userId}`);
     return;
   }
 
   if (alreadyHasAccess) {
-    await ctx.reply("Подписка обновлена.");
+    await ctx.reply("Подписка обновлена");
     return;
   }
 
@@ -390,7 +390,7 @@ bot.on("successful_payment", async (ctx) => {
     await ctx.reply(`Вот твоя временная ссылка: ${inviteLink.invite_link}`);
   } catch (e) {
     await ctx.reply(
-      "Произошла ошибка при создании ссылки. Пожалуйста, напиши @pkorovkina."
+      "Произошла ошибка при создании ссылки. Пожалуйста, напиши @pkorovkina"
     );
   }
 });

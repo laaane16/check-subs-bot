@@ -19,7 +19,7 @@ async function notifyUsers(daysLeft: number) {
     if (daysLeft >= 1) {
       const message = `⏳ Твоя подписка ${subscription.title} заканчивается через ${daysLeft} ${
         daysLeft === 1 ? "день" : "дня"
-      }! Не забудь продлить, чтобы не потерять доступ.`;
+      }! Не забудь продлить, чтобы не потерять доступ`;
       try {
         await bot.telegram.sendMessage(row.user_id, message, {
           disable_notification: true,
@@ -31,7 +31,7 @@ async function notifyUsers(daysLeft: number) {
         );
       }
     } else {
-      const message = `⏳ Твоя подписка ${subscription.title} закончилась. Придется удалить тебя из приватного канала.`;
+      const message = `⏳ Твоя подписка ${subscription.title} закончилась. Придется удалить тебя из приватного канала`;
       try {
         await bot.telegram
           .sendMessage(row.user_id, message, {
