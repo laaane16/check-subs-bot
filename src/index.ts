@@ -1,86 +1,93 @@
-import { Context, Markup, session, Telegraf } from 'telegraf';
+import { Context, Markup, session, Telegraf } from "telegraf";
 import { Postgres } from "@telegraf/session/pg";
 
-import 'dotenv/config';
-import './notifyUsers';
-import { pool } from './db';
+import "dotenv/config";
+import "./notifyUsers";
+import { pool } from "./db";
 
 interface IBotContext extends Context {
   session: {
     months?: number;
     awaitingMonthsInput?: boolean;
-  }
+  };
 }
 
 const token = process.env.TG_SECRET_TOKEN;
 const providerToken = process.env.PROVIDER_TOKEN;
 const channelId = process.env.PRIVATE_CHANNEL_ID;
+const privateChatId = Number(process.env.PRIVATE_CHAT_ID);
 const CURRENCY = "RUB";
 const PRICE = Number(process.env.PRICE);
 
-if (!token || !providerToken || !channelId || !PRICE){
-  throw new Error('missing required environment')
+if (!token || !providerToken || !channelId || !PRICE || !privateChatId) {
+  throw new Error("missing required environment");
 }
 
 export const bot = new Telegraf<IBotContext>(token);
 
-const store = Postgres({pool}) as any;
+const store = Postgres({ pool }) as any;
 
-bot.use(Telegraf.log())
-bot.use(session({store}));
+bot.use(async (ctx, next) => {
+  const chatId = ctx.chat?.id;
+  if (chatId === privateChatId) return;
+
+  await next();
+});
+bot.use(Telegraf.log());
+bot.use(session({ store }));
 bot.catch((err, ctx) => {
   console.error(`Ошибка в обработке апдейта от ${ctx.from?.id}:`, err);
 });
 
 const getInvoice = (id: number, months: number) => {
   const invoice = {
-    "chat_id" : id,
-    "title" : 'Подписка на приватный канал',
-    "description" : "Ежемесячная подписка на мой приватный канал",
-    "payload" : `subscription_${id}_${months}`,
-    "currency" : CURRENCY,
-    "provider_token" : providerToken,
-    prices: [{ label: 'Invoice Title', amount: 100 * PRICE * months }],
+    chat_id: id,
+    title: "Подписка на приватный канал",
+    description: "Ежемесячная подписка на мой приватный канал",
+    payload: `subscription_${id}_${months}`,
+    currency: CURRENCY,
+    provider_token: providerToken,
+    prices: [{ label: "Invoice Title", amount: 100 * PRICE * months }],
     need_email: true,
-    send_email_to_provider : true,
+    send_email_to_provider: true,
     provider_data: JSON.stringify({
       receipt: {
         items: [
-            {
-            "description" : "Подписка на приватный канал",
-            "vat_code" : 1,
-            "quantity" : months,
-            "amount" : {
-              "value" : `${PRICE}.00`,
-              "currency" : CURRENCY
+          {
+            description: "Подписка на приватный канал",
+            vat_code: 1,
+            quantity: months,
+            amount: {
+              value: `${PRICE}.00`,
+              currency: CURRENCY,
             },
-            "payment_mode" : "full_payment",
-          }
-        ]
-      }
-    })
-  }
+            payment_mode: "full_payment",
+          },
+        ],
+      },
+    }),
+  };
 
   return invoice;
-}
+};
 
 const restartBot = async (ctx: IBotContext) => {
   ctx.session = {
     months: 1,
     awaitingMonthsInput: false,
-  }
+  };
 
-  await ctx.reply("Привет! Здесь ты можешь оформить подписку и получить доступ к моему приватному фитнес-каналу с тренировками, советами и мотивацией.", Markup.keyboard([
-    ['📦 Приобрести подписку'],
-    ['🕒 Срок подписки']
-    ])
-    .resize()
-    .oneTime(false));
-}
+  await ctx.reply(
+    "Привет! Здесь ты можешь оформить подписку и получить доступ к моему приватному фитнес-каналу с тренировками, советами и мотивацией.",
+    Markup.keyboard([["📦 Приобрести подписку"], ["🕒 Срок подписки"]])
+      .resize()
+      .oneTime(false)
+  );
+};
 
 bot.start(async (ctx) => {
   await restartBot(ctx);
-})
+});
 
 bot.hears("📦 Приобрести подписку", async (ctx) => {
   await ctx.reply(
@@ -89,76 +96,75 @@ bot.hears("📦 Приобрести подписку", async (ctx) => {
       [Markup.button.callback("Банковская карта/ ЮMoney", "yocassa_payment")],
       [Markup.button.callback("Закрыть", "cancel_action")],
     ])
-  )
-})
+  );
+});
 
-bot.hears("🕒 Срок подписки",async (ctx) => {
-  const userId = ctx.from.id
+bot.hears("🕒 Срок подписки", async (ctx) => {
+  const userId = ctx.from.id;
 
-  const { rows } = await pool.query(`
+  const { rows } = await pool.query(
+    `
   SELECT "subscription_end" FROM users where user_id = $1
-  `, [userId])
+  `,
+    [userId]
+  );
   const result = rows[0];
 
-  if (result && result.subscription_end){
+  if (result && result.subscription_end) {
     const date = new Date(result.subscription_end);
-    const formatted = date.toLocaleDateString('ru-RU', { 
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    const formatted = date.toLocaleDateString("ru-RU", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
-    if (date < new Date()){
+    if (date < new Date()) {
       await ctx.reply("Подписка неактивна");
-    }else{
+    } else {
       await ctx.reply(`Подписка активна до ${formatted}`);
     }
-  }
-  else{
+  } else {
     await ctx.reply("Подписка неактивна");
   }
-})
+});
 
 bot.action("yocassa_payment", async (ctx) => {
-  if (!ctx.session){
+  if (!ctx.session) {
     return restartBot(ctx);
   }
 
   ctx.session.awaitingMonthsInput = true;
 
   await ctx.reply(
-    "Введите количество месяцев подписки (от 1 до 12):",
-    Markup.inlineKeyboard([
-      [Markup.button.callback("Отмена", "cancel_action")]
-    ])
+    "В данный момент можно приобрести только 1 месяц подписки по заниженной цене, введите любой символ для подтверждения",
+    // "Введите количество месяцев подписки (от 1 до 12):",
+    Markup.inlineKeyboard([[Markup.button.callback("Отмена", "cancel_action")]])
   );
 
-  await ctx.answerCbQuery(); 
+  await ctx.answerCbQuery();
 });
 
-bot.action('cancel_action', async (ctx) => {
-  await ctx.editMessageText(
-    "Действие отменено. Возвращаюсь в главное меню...",
-  );
+bot.action("cancel_action", async (ctx) => {
+  await ctx.editMessageText("Действие отменено. Возвращаюсь в главное меню...");
 
   await restartBot(ctx);
 
-  await ctx.answerCbQuery(); 
+  await ctx.answerCbQuery();
 });
-
 
 bot.on("text", async (ctx) => {
   const text = ctx.message.text.trim();
-  const months = Number(text);
+  // const months = Number(text);
+  const months = 1;
 
-  if (!ctx.session || !ctx.session?.awaitingMonthsInput){
+  if (!ctx.session || !ctx.session?.awaitingMonthsInput) {
     return restartBot(ctx);
   }
 
-  if (!Number.isInteger(months) || months < 1 || months > 12) {
-    return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
-      [Markup.button.callback("Отмена", "cancel_action")]
-    ]));
-  }
+  // if (!Number.isInteger(months) || months < 1 || months > 12) {
+  //   return ctx.reply("Пожалуйста, введите число от 1 до 12.", Markup.inlineKeyboard([
+  //     [Markup.button.callback("Отмена", "cancel_action")]
+  //   ]));
+  // }
 
   ctx.session.months = months;
 
@@ -166,19 +172,22 @@ bot.on("text", async (ctx) => {
     `Вы выбрали ${months} мес. подписки.`,
     Markup.inlineKeyboard([
       [Markup.button.callback("Оплатить", "confirm_payment")],
-      [Markup.button.callback("Отмена", "cancel_action")]
+      [Markup.button.callback("Отмена", "cancel_action")],
     ])
   );
 });
 
-bot.on('pre_checkout_query', async (ctx) => await ctx.answerPreCheckoutQuery(true));
+bot.on(
+  "pre_checkout_query",
+  async (ctx) => await ctx.answerPreCheckoutQuery(true)
+);
 
 bot.action("confirm_payment", async (ctx) => {
-  await ctx.answerCbQuery(); 
+  await ctx.answerCbQuery();
 
   const id = ctx.from.id;
 
-  if (!ctx.session || !ctx.session.months){
+  if (!ctx.session || !ctx.session.months) {
     return restartBot(ctx);
   }
   const months = ctx.session.months;
@@ -186,12 +195,12 @@ bot.action("confirm_payment", async (ctx) => {
   await ctx.replyWithInvoice(getInvoice(id, months));
 });
 
-bot.on('successful_payment', async (ctx) => {
+bot.on("successful_payment", async (ctx) => {
   const inviteLink = await bot.telegram.createChatInviteLink(channelId, {
-    expire_date: Math.floor(Date.now() / 1000) + 60 * 60 * 24, 
+    expire_date: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
     member_limit: 1,
-  });    
-  
+  });
+
   const subscriptionDuration = ctx.session.months;
   const userId = ctx.from.id;
 
@@ -206,24 +215,29 @@ bot.on('successful_payment', async (ctx) => {
     END
   RETURNING user_id, subscription_end;
 `;
-  
-  let attempts = 0
+
+  let attempts = 0;
   let res;
 
-  while (attempts < 5 && !res){
-    try{
+  while (attempts < 5 && !res) {
+    try {
       res = await pool.query(insertQuery, [userId, subscriptionDuration]);
 
-      console.log('User added or updated:', res.rows[0]);
-    }catch(e){
+      console.log("Пользователь добавлен или обновлен:", res.rows[0]);
+    } catch (e) {
       attempts++;
-      if (attempts === 5){
-        console.log(`Произошла ${e} ошибка при записывании в бд оплаты для ${userId}`)
+      if (attempts === 5) {
+        await ctx.reply(
+          `Произошла какая-то ошибка, пожалуйста, напишите об этом @pkorovkina`
+        );
+        console.log(
+          `Произошла ${e} ошибка при записывании в бд оплаты для ${userId}`
+        );
       }
     }
   }
 
-  await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`); 
+  await ctx.reply(`Вот ваша временная ссылка: ${inviteLink.invite_link}`);
 });
 
 bot.launch();
