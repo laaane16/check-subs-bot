@@ -12,6 +12,7 @@ import {
 
 import {
   getActiveSubscription,
+  getUserSubscription,
   recordSubscriptionPayment,
 } from "./subscriptionRepository";
 import { IBotContext, InvoicePayload } from "./types";
@@ -121,18 +122,18 @@ const checkSubscriptionPurchase = async (
   userId: number,
   requestedType: SubscriptionType
 ) => {
-  const activeSubscription = await getActiveSubscription(userId);
+  const subscription = await getUserSubscription(userId);
 
   if (
-    !activeSubscription ||
-    activeSubscription.subscription_type === requestedType
+    !subscription ||
+    subscription.subscription_type === requestedType
   ) {
     return null;
   }
 
   return getActiveSubscriptionMessage(
-    activeSubscription.subscription_type,
-    activeSubscription.subscription_end
+    subscription.subscription_type,
+    subscription.subscription_end
   );
 };
 
@@ -206,21 +207,21 @@ bot.start(async (ctx) => {
 });
 
 bot.hears("📦 Приобрести подписку", async (ctx) => {
-  const activeSubscription = await getActiveSubscription(ctx.from.id);
+  const userSubscription = await getUserSubscription(ctx.from.id);
 
-  if (activeSubscription) {
-    const subscription = subscriptions[activeSubscription.subscription_type];
+  if (userSubscription) {
+    const subscription = subscriptions[userSubscription.subscription_type];
 
     await ctx.reply(
       `${getActiveSubscriptionMessage(
-        activeSubscription.subscription_type,
-        activeSubscription.subscription_end
+        userSubscription.subscription_type,
+        userSubscription.subscription_end
       )}. Но ты всегда можешь продлить активный вариант`,
       Markup.inlineKeyboard([
         [
           Markup.button.callback(
             `Продлить ${subscription.title} — ${subscription.price} ₽`,
-            `select_subscription_${activeSubscription.subscription_type}`
+            `select_subscription_${userSubscription.subscription_type}`
           ),
         ],
         [Markup.button.callback("Закрыть", "cancel_action")],

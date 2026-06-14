@@ -69,7 +69,7 @@ async function notifyUsers(daysLeft: number) {
 }
 
 const job = new CronJob(
-  "05 00 * * *",
+  "00 00 * * *",
   async () => {
     await notifyUsers(3);
     await notifyUsers(2);

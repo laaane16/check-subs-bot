@@ -23,6 +23,22 @@ export const getActiveSubscription = async (
   return rows[0] ?? null;
 };
 
+export const getUserSubscription = async (
+  userId: number
+): Promise<UserSubscription | null> => {
+  const { rows } = await pool.query<UserSubscription>(
+    `
+      SELECT subscription_type, subscription_end
+      FROM users
+      WHERE user_id = $1
+      LIMIT 1;
+    `,
+    [userId]
+  );
+
+  return rows[0] ?? null;
+};
+
 export const recordSubscriptionPayment = async (
   userId: number,
   subscriptionType: SubscriptionType,
@@ -43,7 +59,6 @@ export const recordSubscriptionPayment = async (
           END
       WHERE
         users.subscription_type = $2
-        OR users.subscription_end < CURRENT_DATE
       RETURNING user_id, subscription_type, subscription_end;
     `,
     [userId, subscriptionType, months]
