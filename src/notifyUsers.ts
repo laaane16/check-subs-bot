@@ -69,7 +69,7 @@ async function notifyUsers(daysLeft: number) {
 }
 
 const job = new CronJob(
-  "00 00 * * *",
+  "05 00 * * *",
   async () => {
     await notifyUsers(3);
     await notifyUsers(2);
@@ -78,7 +78,7 @@ const job = new CronJob(
   },
   null,
   true,
-  "Europe/Moscow"
+  "UTC"
 );
 
 job.start();
